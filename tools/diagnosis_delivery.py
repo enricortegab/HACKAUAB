@@ -1,99 +1,155 @@
 from langchain.tools import tool
 from pydantic import BaseModel, Field
-from typing import Dict, Optional
+from typing import Dict
+import os
+import requests
 from datetime import datetime
-
-# TODO: not implemented
-
-class DiagnosisDeliveryInput(BaseModel):
-    patient_id: str = Field(..., description="Unique patient identifier")
-    diagnosis: Dict = Field(..., description="Validated medical diagnosis")
-    treatment_plan: Dict = Field(..., description="Structured treatment plan")
-    communication_preferences: Dict
+from fpdf import FPDF
+import base64
+import streamlit as st
 
 
-@tool(args_schema=DiagnosisDeliveryInput)
-def diagnosis_delivery(
-        patient_id: str,
-        diagnosis: Dict,
-        treatment_plan: Dict,
-        communication_preferences: Optional[Dict] = None
-) -> dict:
+class DiagnosisInput(BaseModel):
+    patient_id: str = Field(..., description="ID del paciente")
+    symptoms: str = Field(..., description="Síntomas actuales")
+    medical_history: str = Field(..., description="Historial médico relevante")
+    current_medications: str = Field(..., description="Medicación actual")
+
+
+def generate_expert_diagnosis(llm, symptoms, medical_history, current_medications) -> Dict:
+    prompt = f"""
+    Como médico especialista, analice la siguiente información:
+
+    **Síntomas actuales:**
+    {symptoms}
+
+    **Historial médico:**
+    {medical_history}
+
+    **Medicación actual:**
+    {current_medications}
+
+    Proporcione:
+    1. Diagnóstico detallado
+    2. Recetas médicas necesarias
+    3. Recomendaciones de tratamiento
+    4. Pruebas adicionales requeridas
+
+    Formato de respuesta:
+    ### Diagnóstico:
+    [texto]
+
+    ### Recetas: 
+    [texto]
+
+    ### Recomendaciones:
+    [texto]
+
+    ### Pruebas:
+    [texto]
     """
-    Delivers validated diagnosis and treatment plan to patient through the chatbot interface.
-    Formats information according to patient's communication preferences.
+
+    response = llm.invoke(prompt)
+    content = response.content if hasattr(response, 'content') else str(response)
+
+    sections = {
+        "diagnosis": "No disponible",
+        "prescriptions": "No requeridas",
+        "recommendations": "No disponibles",
+        "tests": "No requeridas"
+    }
+
+    current_section = None
+    for line in content.split('\n'):
+        if line.startswith("### Diagnóstico:"):
+            current_section = "diagnosis"
+            sections[current_section] = line.replace("### Diagnóstico:", "").strip()
+        elif line.startswith("### Recetas:"):
+            current_section = "prescriptions"
+            sections[current_section] = line.replace("### Recetas:", "").strip()
+        elif line.startswith("### Recomendaciones:"):
+            current_section = "recommendations"
+            sections[current_section] = line.replace("### Recomendaciones:", "").strip()
+        elif line.startswith("### Pruebas:"):
+            current_section = "tests"
+            sections[current_section] = line.replace("### Pruebas:", "").strip()
+        elif current_section:
+            sections[current_section] += "\n" + line.strip()
+
+    return sections
+
+
+def create_diagnosis_pdf(patient_id, diagnosis_data):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+
+    # Encabezado
+    pdf.cell(0, 10, f"Reporte Médico - {patient_id}", 0, 1, 'C')
+    pdf.ln(10)
+
+    # Diagnóstico
+    pdf.set_font('Arial', 'B', 14)
+    pdf.cell(0, 10, 'Diagnóstico:', 0, 1)
+    pdf.set_font('Arial', '', 12)
+    pdf.multi_cell(0, 8, diagnosis_data['diagnosis'])
+
+    # Recetas
+    pdf.ln(5)
+    pdf.set_font('Arial', 'B', 14)
+    pdf.cell(0, 10, 'Recetas Médicas:', 0, 1)
+    pdf.set_font('Arial', '', 12)
+    pdf.multi_cell(0, 8, diagnosis_data['prescriptions'])
+
+    # Recomendaciones
+    pdf.ln(5)
+    pdf.set_font('Arial', 'B', 14)
+    pdf.cell(0, 10, 'Recomendaciones:', 0, 1)
+    pdf.set_font('Arial', '', 12)
+    pdf.multi_cell(0, 8, diagnosis_data['recommendations'])
+
+    # Generar PDF en memoria
+    pdf_bytes = pdf.output(dest='S').encode('latin-1')
+    return pdf_bytes
+
+
+@tool(args_schema=DiagnosisInput)
+def expert_diagnosis(patient_id: str, symptoms: str, medical_history: str, current_medications: str) -> Dict:
     """
+    do something
+    :param patient_id:
+    :param symptoms:
+    :param medical_history:
+    :param current_medications:
+    :return:
+    """
+    from llm import llm  # Importa tu LLM real
+
     try:
-        # Default communication preferences
-        if communication_preferences is None:
-            communication_preferences = {"channel": "chat", "language": "es"}
+        # Generar diagnóstico
+        diagnosis_data = generate_expert_diagnosis(llm, symptoms, medical_history, current_medications)
 
-        # Format the diagnosis message
-        formatted_message = format_diagnosis_message(
-            diagnosis,
-            treatment_plan,
-            communication_preferences["language"]
-        )
+        # Crear PDF
+        pdf_bytes = create_diagnosis_pdf(patient_id, diagnosis_data)
+        pdf_b64 = base64.b64encode(pdf_bytes).decode('utf-8')
 
-        # Create delivery record
-        delivery_record = {
-            "patient_id": patient_id,
-            "timestamp": datetime.now().isoformat(),
-            "status": "delivered",
-            "content": formatted_message,
-            "communication_channel": communication_preferences["channel"]
-        }
+        # Actualizar historial médico
+        if st.session_state.medical_history:
+            latest_case = st.session_state.medical_history[-1]
+            latest_case["diagnosis_report"] = {
+                "pdf": pdf_b64,
+                "data": diagnosis_data,
+                "timestamp": datetime.now().isoformat()
+            }
 
         return {
             "status": "success",
-            "delivery_record": delivery_record,
-            "formatted_message": formatted_message
+            "diagnosis": diagnosis_data['diagnosis'],
+            "prescriptions": diagnosis_data['prescriptions'],
+            "recommendations": diagnosis_data['recommendations'],
+            "tests": diagnosis_data['tests'],
+            "pdf_available": True
         }
 
     except Exception as e:
-        return {
-            "status": "error",
-            "error": str(e),
-            "timestamp": datetime.now().isoformat()
-        }
-
-
-def format_diagnosis_message(
-        diagnosis: Dict,
-        treatment_plan: Dict,
-        language: str = "es"
-) -> str:
-    """
-    Formats diagnosis and treatment plan into patient-friendly message
-    """
-    # Base template
-    template = """
-    🩺 **Resultados Médicos Validados**  
-
-    **Diagnóstico Principal:**  
-    {diagnosis}  
-
-    **Detalles del Diagnóstico:**  
-    {diagnosis_details}  
-
-    **Plan de Tratamiento:**  
-    {treatment_plan}  
-
-    **Instrucciones Importantes:**  
-    {important_notes}  
-
-    **Siguientes Pasos:**  
-    {next_steps}  
-
-    _Este diagnóstico ha sido validado por nuestro equipo médico._
-    """
-
-    # Extract components
-    components = {
-        "diagnosis": diagnosis.get("condition", "N/A"),
-        "diagnosis_details": diagnosis.get("details", "N/A"),
-        "treatment_plan": "\n".join(
-            f"- {k}: {v}" for k, v in treatment_plan.items()
-        ),
-        "important_notes": diagnosis.get("important_notes", "Siga las indicaciones médicas"),
-        "next_steps": diagnosis.get("next_steps", "Programar")}
+        return {"status": "error", "message": str(e)}

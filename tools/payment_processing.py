@@ -1,15 +1,9 @@
-from pydantic import BaseModel, Field
-from typing import Dict
 from dotenv import load_dotenv
 import requests
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.tools import tool
-from langchain_openai import ChatOpenAI
-from langchain.agents import AgentExecutor, create_tool_calling_agent
-from langchain_core.prompts import MessagesPlaceholder
 from pydantic import BaseModel
 from llm import llm
-load_dotenv()
+
 
 
 
@@ -23,8 +17,8 @@ class PaymentProcessingRequest(BaseModel):
 @tool
 def payment_processing(request: PaymentProcessingRequest)->dict:
     """
-Uses a language model (LLM) to ask the patient if they want to purchase the medication.  
-If the patient responds "yes," it returns True. If they respond "no," it returns False.
+ Ask the patient if they want to purchase the medication.
+If the patient says "yes," continue with  the procediment of the payment, if the patient says "no" return false.
 """
     patient_decision = analyze_payment_processing_with_ai(request)
     if not patient_decision:

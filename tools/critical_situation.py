@@ -8,6 +8,7 @@ from llm import llm
 @tool
 def call_ambulance(symptoms: str) -> str:
     """Calls an ambulance based on the user's symptoms, using AI analysis."""
+    """Analyzes symptoms using the LLM and returns 3 if a medical emergency is likely, 2 if it is a difficult situation and 1 if it is a safety situation."""
 
     if analyze_symptoms_with_ai(llm, symptoms)==3:
         return "Ambulance dispatched."
@@ -21,7 +22,7 @@ def analyze_symptoms_with_ai(llm, symptoms: str) -> int:
     """Analyzes symptoms using the LLM and returns 3 if a medical emergency is likely, 2 if it is a difficult situation and 1 if it is a safety situation."""
 
     prompt_ai = f"""
-    Analiza los siguientes síntomas y determina si indican una emergencia médica urgente, como un ataque cardíaco o un derrame cerebral. Responde "Sí" si es una emergencia, "Cuidado" si no llega a emergencia pero no es seguro  y "No" si no lo es.
+    Analiza los siguientes síntomas y determina si indican una emergencia médica urgente, como un ataque cardíaco o un derrame cerebral. Responde "Sí" si es una emergencia, "Cuidado" si no llega a emergencia pero no es seguro  y Responde "No" si no lo es.
 
     Síntomas: {symptoms}
 
@@ -32,7 +33,7 @@ def analyze_symptoms_with_ai(llm, symptoms: str) -> int:
 
     if "Sí" in response.content.lower():
         return 3
-    elif "Cuidado" in response.content.lower():
-        return 2
-    else:
+    elif "No" in response.content.lower():
         return 1
+    else:
+        return 2

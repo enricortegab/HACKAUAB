@@ -10,11 +10,6 @@ from llm import llm, prompt
 agent = create_tool_calling_agent(llm, tools, prompt)
 agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 
-chat_history = []
-
-
-
-# Inicialización del estado
 st.session_state.setdefault("medical_history", [])
 st.session_state.setdefault("messages", [
     {"role": "assistant", "content": "¡Hola! Soy tu asistente de salud rural. ¿Qué síntomas estás experimentando?"}])
@@ -22,9 +17,9 @@ st.session_state.setdefault("messages", [
 st.set_page_config(layout="wide")
 col1, col2 = st.columns([1, 1])
 
-# Ejemplo de ubicación del paciente
-# Ejemplo de ubicación del paciente
-patient_location = {'lat': 19.4326, 'lon': -99.1332}  # Ciudad de México como ejemplo
+patient_location = {'lat': 19.4326, 'lon': -99.1332}
+
+meds = []
 
 # Ubicaciones de farmacias cercanas
 pharmacies_locations = pd.DataFrame([
@@ -50,6 +45,7 @@ with col1:
     # Informe detallado del caso
     with tabs[1]:
         st.subheader("Resumen Completo del Caso")
+
         if st.session_state.medical_history:
             latest_case = st.session_state.medical_history[-1]
             st.write(f"**Paciente:** {latest_case.get('patient_id', 'N/A')}")
@@ -93,9 +89,43 @@ with col1:
     # Centro de validación médica
     with tabs[3]:
         st.subheader("Centro de Validación Médica")
+        st.map(pd.DataFrame([patient_location]))
+
 
         if st.session_state.medical_history:
             latest_case = st.session_state.medical_history[-1]
+
+            with tabs[3]:
+                st.subheader("Centro de Validación Médica")
+                st.map(pd.DataFrame([patient_location]))
+
+                if st.session_state.medical_history:
+                    latest_case = st.session_state.medical_history[-1]
+
+                    # Mostrar PDF si existe
+                    if latest_case.get("diagnosis_report"):
+                        report = latest_case["diagnosis_report"]
+
+                        st.markdown("### Reporte de Diagnóstico")
+                        col1, col2 = st.columns([3, 1])
+
+                        with col1:
+                            st.write("**Diagnóstico:**")
+                            st.markdown(f"> {report['data']['diagnosis']}")
+
+                            st.write("**Recomendaciones:**")
+                            st.markdown(report['data']['recommendations'])
+
+                        with col2:
+                            st.write("**Descargar Reporte**")
+                            pdf_bytes = base64.b64decode(report['pdf'])
+
+                            st.download_button(
+                                label="📄 Descargar PDF",
+                                data=pdf_bytes,
+                                file_name=f"diagnostico_{latest_case.get('patient_id', '')}.pdf",
+                                mime="application/pdf"
+                            )
 
             if latest_case.get("medical_validation"):
                 st.success("✅ Caso Validado")

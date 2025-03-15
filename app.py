@@ -1,84 +1,106 @@
-import os
-from datetime import datetime
 import streamlit as st
-from langchain.agents import create_tool_calling_agent, AgentExecutor
-from langchain_core.output_parsers import PydanticOutputParser
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_openai import ChatOpenAI
-from pydantic import BaseModel
+from datetime import datetime
+import pandas as pd
+from langchain.agents import AgentExecutor, create_tool_calling_agent
 
-from models import MedicalEncounter
-from utils import extract_from_response, extract_payment_info, get_locations
-from dotenv import load_dotenv
+from tools import tools
 
-load_dotenv()
+from llm import llm, prompt
 
-llm = ChatOpenAI()
-
-class Response(BaseModel):
-    topic: str
-    summary: str
-    sources: list[str]
-    tools_used: list[str]
-
-parser = PydanticOutputParser(pydantic_object=Response)
-
-prompt = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            """You are a compassionate healthcare assistant for rural populations. Guide the conversation to:
-1. Conduct complete symptom analysis
-2. Request medical images when necessary
-3. Provide diagnosis with confidence levels
-4. Suggest nearby treatment options
-5. Offer payment solutions
-6. Maintain multilingual support""",
-        ),
-        ("placeholder", "{chat_history}"),
-        ("human", "{query}"),
-        ("placeholder", "{agent_scratchpad}"),
-    ]
-).partial(format_instructions=parser.get_format_instructions())
-
-tools = []
-
-agent = create_tool_calling_agent(
-    llm=llm,
-    prompt=prompt,
-    tools=tools
-)
+agent = create_tool_calling_agent(llm, tools, prompt)
 agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 
-# Initialize session state
+chat_history = []
+
+
+
+# Inicialización del estado
 st.session_state.setdefault("medical_history", [])
-st.session_state.setdefault("messages", [{"role": "assistant", "content": "¡Hola! Soy tu asistente de salud rural. ¿Qué síntomas estás experimentando?"}])
+st.session_state.setdefault("messages", [
+    {"role": "assistant", "content": "¡Hola! Soy tu asistente de salud rural. ¿Qué síntomas estás experimentando?"}])
 
-# Page layout
 st.set_page_config(layout="wide")
-
-# Create columns outside of the sidebar context
 col1, col2 = st.columns([1, 1])
 
-# Left Column (Sidebar-like content)
-with col1:
-    st.header("Contexto Médico")  # Traducido: "Medical Context"
-    tabs = st.tabs(["Mapa Sanitario", "Red de Farmacias", "Resumen del Caso", "Historial Completo", "Validación Médica"])
+# Ejemplo de ubicación del paciente
+# Ejemplo de ubicación del paciente
+patient_location = {'lat': 19.4326, 'lon': -99.1332}  # Ciudad de México como ejemplo
 
-    # ... (rest of the left column content, including the validation tab)
-    with tabs[4]:  # Nueva pestaña de validación médica
-        st.subheader("Centro de Validación Médica")  # Traducido: "Medical Validation Hub"
+# Ubicaciones de farmacias cercanas
+pharmacies_locations = pd.DataFrame([
+    {'lat': 19.434, 'lon': -99.140, 'nombre': 'Farmacia Uno'},
+    {'lat': 19.429, 'lon': -99.130, 'nombre': 'Farmacia Dos'},
+    {'lat': 19.431, 'lon': -99.135, 'nombre': 'Farmacia Tres'},
+    {'lat': 19.435, 'lon': -99.132, 'nombre': 'Farmacia Cuatro'}
+])
+with col1:
+    st.header("Contexto Médico")
+
+    tabs = st.tabs(["Red de Farmacias cercanas", "Resumen del Caso", "Historial Completo", "Centro de Validación Médica", "Pago"])
+
+
+    # Red sanitaria según ubicación
+    with tabs[0]:
+        st.subheader("Red de Farmacias Local")
+        st.write("Farmacias cercanas según la ubicación del paciente")
+
+        st.map(pd.concat([pd.DataFrame([patient_location]), pharmacies_locations]))
+
+
+    # Informe detallado del caso
+    with tabs[1]:
+        st.subheader("Resumen Completo del Caso")
+        if st.session_state.medical_history:
+            latest_case = st.session_state.medical_history[-1]
+            st.write(f"**Paciente:** {latest_case.get('patient_id', 'N/A')}")
+            st.write(f"**Síntomas:** {', '.join(latest_case.get('symptoms', []))}")
+            st.write(f"**Diagnóstico:** {latest_case.get('diagnosis', 'Pendiente')}")
+            st.write(f"**Recomendaciones:** {latest_case.get('recommendations', 'Pendientes')}")
+            if latest_case.get("medical_validation"):
+                st.write("### Validación Médica")
+                val = latest_case['medical_validation']
+                st.write(f"**Estado Validación:** {val['status']}")
+                st.write(f"**Urgencia:** {val['urgency']}")
+                st.write(f"**Notas médicas:** {val['notes']}")
+                st.write(f"**Plan tratamiento:** {val['treatment_plan']}")
+            else:
+                st.warning("El caso aún no ha sido validado médicamente")
+        else:
+            st.info("No hay datos recientes del paciente")
+
+    with tabs[2]:
+        historial_medico = [
+    {"Fecha": "2024-03-05", "Edad": 30, "Síntomas": "Dolor muscular", "Diagnóstico": "Contractura muscular", "Tratamiento": "Relajante muscular, descanso"},
+    {"Fecha": "2024-01-17", "Edad": 30, "Síntomas": "Dolor de oído", "Diagnóstico": "Otitis", "Tratamiento": "Gotas óticas antibióticas"},
+    {"Fecha": "2024-03-01", "Edad": 29, "Síntomas": "Dolor de cabeza frecuente", "Diagnóstico": "Migraña", "Tratamiento": "Ibuprofeno, reducción del estrés"},
+    {"Fecha": "2024-02-05", "Edad": 29, "Síntomas": "Congestión nasal", "Diagnóstico": "Rinitis alérgica", "Tratamiento": "Antihistamínicos diarios"},
+    {"Fecha": "2024-01-15", "Edad": 27, "Síntomas": "Dolor lumbar", "Diagnóstico": "Lumbalgia", "Tratamiento": "Ibuprofeno, fisioterapia"},
+    {"Fecha": "2023-12-02", "Edad": 26, "Síntomas": "Mareos, debilidad", "Diagnóstico": "Hipotensión", "Tratamiento": "Aumento de líquidos y reposo"},
+    {"Fecha": "2023-08-20", "Edad": 25, "Síntomas": "Inflamación en rodilla", "Diagnóstico": "Bursitis", "Tratamiento": "Reposo, antiinflamatorios"},
+    {"Fecha": "2023-05-05", "Edad": 24, "Síntomas": "Dolor torácico leve", "Diagnóstico": "Costocondritis", "Tratamiento": "Analgésicos, descanso físico"},
+    {"Fecha": "2023-03-12", "Edad": 23, "Síntomas": "Cansancio excesivo", "Diagnóstico": "Anemia leve", "Tratamiento": "Suplementos de hierro"},
+    {"Fecha": "2023-01-25", "Edad": 23, "Síntomas": "Erupción cutánea", "Diagnóstico": "Dermatitis", "Tratamiento": "Crema tópica, evitar irritantes"},
+    {"Fecha": "2022-11-09", "Edad": 21, "Síntomas": "Tos persistente, fiebre", "Diagnóstico": "Bronquitis", "Tratamiento": "Amoxicilina 500mg cada 8h por 7 días"},
+    {"Fecha": "2022-02-05", "Edad": 20, "Síntomas": "Mareos frecuentes", "Diagnóstico": "Vértigo posicional benigno", "Tratamiento": "Ejercicios vestibulares, reposo"},
+    {"Fecha": "2021-11-10", "Edad": 20, "Síntomas": "Dolor en la garganta", "Diagnóstico": "Faringitis", "Tratamiento": "Ibuprofeno, gárgaras salinas"},
+    {"Fecha": "2021-08-15", "Edad": 18, "Síntomas": "Dolor muscular generalizado", "Diagnóstico": "Fibromialgia leve", "Tratamiento": "Fisioterapia, ejercicios moderados"},
+    {"Fecha": "2021-04-20", "Edad": 15, "Síntomas": "Acidez frecuente", "Diagnóstico": "Reflujo gastroesofágico", "Tratamiento": "Omeprazol, dieta especial"}
+]
+
+        df_history = pd.DataFrame(historial_medico)
+        st.dataframe(df_history, use_container_width=True)
+
+    # Centro de validación médica
+    with tabs[3]:
+        st.subheader("Centro de Validación Médica")
 
         if st.session_state.medical_history:
             latest_case = st.session_state.medical_history[-1]
 
-            # Sección de validación médica
             if latest_case.get("medical_validation"):
                 st.success("✅ Caso Validado")
                 st.write(f"**Estado:** {latest_case['medical_validation']['status']}")
                 st.write(f"**Urgencia:** {latest_case['medical_validation'].get('urgency', 'N/A')}")
-                st.write("**Notas Médicas:**")
-                st.markdown(f"> {latest_case['medical_validation']['notes']}")
                 st.write("**Plan de Tratamiento:**")
                 st.markdown(latest_case['medical_validation']['treatment_plan'])
 
@@ -88,13 +110,6 @@ with col1:
             else:
                 with st.form("medical_review_form"):
                     st.subheader("Validación del Diagnóstico")
-
-                    # Datos del caso
-                    st.write(f"**Paciente:** {latest_case.get('patient_id', 'N/A')}")
-                    st.write(f"**Diagnóstico Preliminar:** {latest_case.get('diagnosis', 'N/A')}")
-                    st.write(f"**Síntomas:** {', '.join(latest_case.get('symptoms', []))}")
-
-                    # Campos de validación
                     diagnosis_status = st.radio(
                         "Estado del Diagnóstico",
                         options=["Confirmado", "Modificado", "Rechazado"],
@@ -107,88 +122,71 @@ with col1:
                         value="Media"
                     )
 
-                    clinical_notes = st.text_area(
-                        "Notas Clínicas",
-                        help="Observaciones profesionales para el caso"
-                    )
-
-                    treatment_plan = st.text_area(
-                        "Plan de Tratamiento Oficial",
-                        value=latest_case.get('recommendations', ''),
-                        height=150
-                    )
+                    clinical_notes = st.text_area("Notas Clínicas")
+                    treatment_plan = st.text_area("Plan de Tratamiento")
 
                     if st.form_submit_button("Validar Diagnóstico"):
-                        # Guardar validación
                         validation_data = {
                             "status": diagnosis_status,
                             "urgency": medical_urgency,
                             "notes": clinical_notes,
                             "treatment_plan": treatment_plan,
-                            "validator": "Dr. " + st.secrets.get("DOCTOR_NAME", "Médico"),
+                            "validator": "Dr. Juan Pérez",
                             "timestamp": datetime.now().isoformat()
                         }
 
-                        # Actualizar historial médico
                         latest_case["medical_validation"] = validation_data
 
-                        # Generar mensaje para el paciente
                         feedback_message = f"""
-                        🩺 **Actualización Médica Oficial** **Estado:** {diagnosis_status}  
+                        🩺 **Actualización Médica Oficial**  
+                        **Estado:** {diagnosis_status}  
                         **Urgencia:** {medical_urgency}  
-                        **Plan de Tratamiento:** {treatment_plan}  
-                        _Validado por: {validation_data['validator']}_  
+                        **Tratamiento:** {treatment_plan}  
+                        _Validado por: {validation_data['validator']}_
                         """
 
-                        # Agregar al historial de chat
                         st.session_state.messages.append({
                             "role": "assistant",
                             "content": feedback_message
                         })
 
-                        st.success("Diagnóstico validado y enviado al paciente")
+                        st.success("Diagnóstico validado y enviado")
                         st.experimental_rerun()
+    with tabs[4]:
+        st.subheader("Pago del Producto - PayRetails")
 
-# Right Column - Chat Interface
+        # Mostrar logo de PayRetails
+        st.image("data/PayRetailers.png", width=400)
+
+        # Botón directo para abrir la página en otra pestaña
+        st.markdown("[🔗 Accede directamente a Pay Retailers para realizar tu pago](https://payretailers.com/es/)",
+                    unsafe_allow_html=True)
+
+        st.markdown("---")
+        st.subheader("Medicamentos disponibles")
+
+        medicamentos = [
+            {"nombre": "Paracetamol 500mg", "precio": "$50 MXN", "imagen": "https://via.placeholder.com/150"},
+            {"nombre": "Omeprazol 20mg", "precio": "$75 MXN", "imagen": "https://via.placeholder.com/150"},
+            {"nombre": "Ibuprofeno 400mg", "precio": "$65 MXN", "imagen": "https://via.placeholder.com/150"}
+        ]
+
+        for med in medicamentos:
+            st.image(med["imagen"], width=100)
+            st.write(f"**{med['nombre']}** - {med['precio']}")
+            if st.button(f"Pagar {med['nombre']}"):
+                st.success(f"Redirigiendo a Pay Retailers para realizar el pago de {med['nombre']}...")
+
 with col2:
-    st.header("Asistente de Salud Rural")  # Traducido: "Rural Health Assistant"
-
-    # Image upload
-    uploaded_image = st.file_uploader("Subir imagen médica", type=["jpg", "png"])  # Traducido: "Upload medical image"
-
-    # Display chat messages
+    st.header("Asistente de Salud Rural")
+    uploaded_image = st.file_uploader("Subir imagen médica", type=["jpg", "png"])
     for msg in st.session_state.messages:
         st.chat_message(msg["role"]).write(msg["content"])
-
-    # User input handling
-    user_input = st.chat_input("Describe tus síntomas o haz una pregunta...")  # Traducido: "Describe your symptoms or ask a question..."
-
+    user_input = st.chat_input("Describe síntomas...")
     if user_input:
         st.session_state.messages.append({"role": "user", "content": user_input})
         st.chat_message("user").write(user_input)
-
-        try:
-            # Get AI response
-            content = agent_executor.invoke({"query": user_input})
-
-            # Process and store medical data
-            try:
-                encounter_data = {
-                    "symptoms": extract_from_response(content, "symptoms"),
-                    "diagnosis": extract_from_response(content, "diagnosis"),
-                    "recommendations": extract_from_response(content, "recommendations"),
-                    "locations": get_locations(content),
-                    "timestamp": datetime.now().isoformat(),
-                    "payment_info": extract_payment_info(content)
-                }
-                encounter = MedicalEncounter(**encounter_data)
-                st.session_state.medical_history.append(encounter.dict())
-            except Exception as e:
-                st.error(f"Error al guardar datos: {str(e)}")  # Traducido: "Data saving error"
-
-            # Display response
-            st.session_state.messages.append({"role": "assistant", "content": content})
-            st.chat_message("assistant").write(content["output"])
-
-        except Exception as e:
-            st.error(f"Error de procesamiento: {str(e)}")  # Traducido: "Processing error"
+        raw = agent_executor.invoke({"query": user_input, "chat_history": st.session_state.messages})
+        response_content = raw.get("output", "No se pudo procesar la respuesta.")
+        st.session_state.messages.append({"role": "assistant", "content": response_content})
+        st.chat_message("assistant").write(response_content)

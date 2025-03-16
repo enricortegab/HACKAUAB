@@ -76,7 +76,34 @@ Desarrollo de las funciones de pago automático y gestión de medicamentos.
 
 Pruebas de seguridad y cumplimiento de normativas financieras.
 
-## ‍ Distribución de Tareas
+## Uso
+
+1. Clonar el repositorio:
+```bash
+git clone https://github.com/enricortegab/HACKAUAB.git
+```
+2. Entrar a la carpeta:
+```bash
+cd ./HACKAUAB
+```
+3. Crear virtual environment:
+```bash
+py -m venv .venv
+```
+4. Activar virtual environment (depende del sistema):
+```bash
+.venv\Scripts\activate
+```
+5. Instalar requerimientos:
+```bash
+pip install -r ./requirements.txt
+```
+6. Lanzar la página:
+```bash
+streamlit run ./app.py
+```
+
+## Distribución de Tareas
 
 ### Participante 1: Desarrollo del Agente Conversacional
 Implementación del modelo de lenguaje (NLP) y optimización de interacción.

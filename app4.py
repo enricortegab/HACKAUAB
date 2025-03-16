@@ -119,8 +119,8 @@ def update_user_location(location_name: str) -> bool:
 def generate_healthcare_locations(user_loc: dict, entity_type: str = "pharmacy"):
     """Generate pharmacy or hospital locations near user"""
     color = PHARMACY_COLOR if entity_type == "pharmacy" else HOSPITAL_COLOR
-    count = rd.randint(5, 10) if entity_type == "pharmacy" else rd.randint(1, 3)
-    spread = 2 if entity_type == "pharmacy" else 5  # Smaller spread for pharmacies
+    count = rd.randint(1, 1) if entity_type == "pharmacy" else rd.randint(1, 1)
+    spread = 2 if entity_type == "pharmacy" else 150  # Smaller spread for pharmacies
 
     return pd.DataFrame([
         {

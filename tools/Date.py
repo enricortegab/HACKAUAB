@@ -4,13 +4,12 @@ from langchain_core.tools import tool
 from pydantic import BaseModel, Field
 from llm import llm
 
-load_dotenv()
+load_dotenv()  # Carga las variables de entorno
 
 
 class AppointmentRequest(BaseModel):
     patient_id: str
     desired_date: str
-    urgency: str
     appointment_api: str
 
 
@@ -25,10 +24,10 @@ def schedule_appointment(request: AppointmentRequest) -> dict:
      """
     # LLM asks for confirmation
     confirmed = ask_patient_confirmation(request)
-    if confirmed:
-        while(confirmed):
-            print ("Le aplazamos la cita 24 horas")
-            confirmed= ask_patient_confirmation(request)
+    if (confirmed):
+       return(f"Se le ha aplazado la cita para {request.desired_date}")
+    else:
+         return(f"De acuerdo no habrá cambios en tu fecha")
 
 
 def ask_patient_confirmation(request: AppointmentRequest) -> bool:
@@ -42,7 +41,6 @@ def ask_patient_confirmation(request: AppointmentRequest) -> bool:
 
     Patient ID: {request.patient_id}
     Desired Date: {request.desired_date}
-    Urgency: {request.urgency}
 
     Would you like to confirm this appointment? Please answer with "Yes" to confirm or "No" to cancel.
 

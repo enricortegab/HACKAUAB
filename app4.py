@@ -561,7 +561,7 @@ def render_chat_interface(agent_executor):
     )
 
     if uploaded_image:
-        st.image(uploaded_image, caption="Imagen subida", use_column_width=True)
+        st.image(uploaded_image, caption="Imagen subida", use_container_width=True)
         st.session_state.setdefault("image_uploaded", True)
 
     # Display chat history

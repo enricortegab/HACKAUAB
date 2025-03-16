@@ -14,7 +14,7 @@ class Response(BaseModel):
     tools_used: list[str]
 
 
-llm = ChatOpenAI(model_name="gpt-4o-mini")
+llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0)
 parser = PydanticOutputParser(pydantic_object=Response)
 
 system_template = """Eres un asistente de salud compasivo para poblaciones rurales. Guía la conversación para:

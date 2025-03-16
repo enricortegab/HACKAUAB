@@ -1,12 +1,12 @@
 # Proyecto: AI Agent para Telemedicina Preventiva en Zonas Rurales
 
-## 📝 Descripción del Problema
+## Descripción del Problema
 Uno de los desafíos más importantes en Latinoamérica es el limitado acceso a recursos médicos en zonas rurales y subdesarrolladas, afectando la calidad y rapidez en la atención médica.
 
-## 🎯 Solución Propuesta
+## Solución Propuesta
 Desarrollar un **AI Agent** que sirva como intermediario entre médicos y pacientes, realizando un prediagnóstico autónomo que facilite y acelere la atención médica en áreas con difícil acceso.
 
-## 🔑 Funcionalidades Principales
+##  Funcionalidades Principales
 
 ### 1. Diagnóstico Virtual Autónomo
 - Interacción con pacientes mediante preguntas y NLP.
@@ -23,14 +23,14 @@ Desarrollar un **AI Agent** que sirva como intermediario entre médicos y pacien
 - Recomendación y compra directa mediante integración con PayRetailers.
 - Opciones de pago adaptadas regionalmente.
 
-## ⚙️ Tecnologías Utilizadas
+##  Tecnologías Utilizadas
 - NLP (Procesamiento del Lenguaje Natural)
 - Computer Vision para imágenes médicas
 - Machine Learning (modelos predictivos)
 - Plataformas digitales seguras para transmisión de datos médicos
 - API PayRetailers para pagos
 
-## 🚀 Fases de Implementación
+## Fases de Implementación
 
 ### Fase 1: Investigación y recopilación de datos
 - Obtención y etiquetado de datos médicos regionales.
@@ -48,7 +48,7 @@ Desarrollar un **AI Agent** que sirva como intermediario entre médicos y pacien
 ### Fase 5: Integración financiera con PayRetailers
 - Implementación de sistemas de pago y financiamiento.
 
-## 🧑‍💻 Distribución de Tareas
+## ‍ Distribución de Tareas
 
 ### Participante 1: Desarrollo del Agente Conversacional
 - NLP, chatbot y diseño UX/UI.
@@ -62,7 +62,7 @@ Desarrollar un **AI Agent** que sirva como intermediario entre médicos y pacien
 ### Participante 4: Integración con PayRetailers
 - Pagos, gestión financiera y adquisición de medicamentos.
 
-## 💼 Beneficio para PayRetailers
+## Beneficio para PayRetailers
 - Expansión a zonas rurales, nuevos clientes.
 - Ofrecer financiamiento accesible para salud preventiva.
 

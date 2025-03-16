@@ -16,10 +16,12 @@ class PaymentProcessingRequest(BaseModel):
 
 @tool
 def payment_processing(request: PaymentProcessingRequest)->dict:
+    """Gestiona el flujo completo de procesamiento de pagos de medicamentos.
+
+    Implementa un proceso en dos etapas:
+    1. Consulta al paciente mediante IA sobre su intención de compra
+    2. Si acepta, ejecuta transacción segura con pasarela de pagos externa
     """
- Ask the patient if they want to purchase the medication.
-If the patient says "yes," continue with  the procediment of the payment, if the patient says "no" return false.
-"""
     patient_decision = analyze_payment_processing_with_ai(request)
     if not patient_decision:
         return {
@@ -54,7 +56,14 @@ If the patient says "yes," continue with  the procediment of the payment, if the
         }
 
 def analyze_payment_processing_with_ai(request:PaymentProcessingRequest) -> bool:
-    """Analiza si el paciente desea comprar el medicamento recetado."""
+    """Determina la intención de compra del paciente usando IA conversacional.
+
+    Flujo de análisis:
+    1. Construye prompt estructurado con datos de medicamento
+    2. Interpreta respuesta natural del paciente
+    3. Clasifica intención usando modelo de lenguaje
+
+    """
 
     prompt_ai = f"""
     El paciente ha recibido la siguiente receta médica:

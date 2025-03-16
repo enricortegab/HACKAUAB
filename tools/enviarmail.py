@@ -5,19 +5,18 @@ from email.mime.text import MIMEText
 import os
 from llm import llm
 
+
 @tool()
 def send_appointment_confirmation(email: str) -> str:
     """
-    Sends and email (ask the user for their email and the disponibility) to the user with the appointment confirmation.
+    Sends an email (ask the user for their email and availability) to the user with the appointment confirmation.
     Do it when the user asks for an appointment.
     """
-
-    # Generate email content using LLM
     prompt = f"""
-    You are an AI specialized in scheduling medical appointments for patients. 
-    Show a copy of the email you've sent following an email instruction and having into account 
-    the previous information of the conversation. 
-    Follow this structure and show it in the interface: 
+       You are an AI specialized in scheduling medical appointments for patients. 
+       Show a copy of the email you've sent following an email instruction and having into account 
+       the previous information of the conversation. 
+       Follow this structure and show it in the interface: 
 
     Tu cita médica ha sido confirmada exitosamente.
 
@@ -31,8 +30,7 @@ def send_appointment_confirmation(email: str) -> str:
 
     Finally say you have sent the email to {email}
     """
-
-    response = llm.invoke(prompt)
+    response = llm.invoke(prompt).content  # <-- Corrección aquí
 
     # SMTP configuration
     smtp_server = "smtp.gmail.com"
@@ -57,5 +55,3 @@ def send_appointment_confirmation(email: str) -> str:
         return response
     except Exception as e:
         return f"Error al enviar el email: {str(e)}"
-
-

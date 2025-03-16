@@ -7,7 +7,8 @@ def pharmacy_locator(location: str):
     """
     prompt = f"""
     You are an AI that knows were all the pharmacies that are available at each location.
-    Given the following location, give the address of a pharmacy near that and they schedule
+    Given the following location, give the address of a pharmacy near that and their schedule.
+    If the user wants to buy the medication online, dont go here, activate the medication tool by returning the dictionary.
 
     Location: {location}
     """

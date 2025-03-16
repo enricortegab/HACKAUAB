@@ -1,16 +1,23 @@
-import streamlit as st
+import base64
 from datetime import datetime
-import pandas as pd
-from langchain.agents import AgentExecutor, create_tool_calling_agent
 
-from tools import tools
+import pandas as pd
+import streamlit as st
+from langchain.agents import AgentExecutor, create_tool_calling_agent
+from langchain_core.output_parsers import PydanticOutputParser
+from pydantic import BaseModel
+from pydantic import Field
 
 from llm import llm, prompt
+from tools import tools
 
 agent = create_tool_calling_agent(llm, tools, prompt)
 agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 
+print("############################################################")
+
 st.session_state.setdefault("medical_history", [])
+st.session_state.setdefault("medicamentos", [])
 st.session_state.setdefault("messages", [
     {"role": "assistant", "content": "¡Hola! Soy tu asistente de salud rural. ¿Qué síntomas estás experimentando?"}])
 
@@ -18,8 +25,6 @@ st.set_page_config(layout="wide")
 col1, col2 = st.columns([1, 1])
 
 patient_location = {'lat': 19.4326, 'lon': -99.1332}
-
-meds = []
 
 # Ubicaciones de farmacias cercanas
 pharmacies_locations = pd.DataFrame([
@@ -31,8 +36,8 @@ pharmacies_locations = pd.DataFrame([
 with col1:
     st.header("Contexto Médico")
 
-    tabs = st.tabs(["Red de Farmacias cercanas", "Resumen del Caso", "Historial Completo", "Centro de Validación Médica", "Pago"])
-
+    tabs = st.tabs(
+        ["Red de Farmacias cercanas", "Resumen del Caso", "Historial Completo", "Centro de Validación Médica", "Pago"])
 
     # Red sanitaria según ubicación
     with tabs[0]:
@@ -40,7 +45,6 @@ with col1:
         st.write("Farmacias cercanas según la ubicación del paciente")
 
         st.map(pd.concat([pd.DataFrame([patient_location]), pharmacies_locations]))
-
 
     # Informe detallado del caso
     with tabs[1]:
@@ -66,22 +70,37 @@ with col1:
 
     with tabs[2]:
         historial_medico = [
-    {"Fecha": "2024-03-05", "Edad": 30, "Síntomas": "Dolor muscular", "Diagnóstico": "Contractura muscular", "Tratamiento": "Relajante muscular, descanso"},
-    {"Fecha": "2024-01-17", "Edad": 30, "Síntomas": "Dolor de oído", "Diagnóstico": "Otitis", "Tratamiento": "Gotas óticas antibióticas"},
-    {"Fecha": "2024-03-01", "Edad": 29, "Síntomas": "Dolor de cabeza frecuente", "Diagnóstico": "Migraña", "Tratamiento": "Ibuprofeno, reducción del estrés"},
-    {"Fecha": "2024-02-05", "Edad": 29, "Síntomas": "Congestión nasal", "Diagnóstico": "Rinitis alérgica", "Tratamiento": "Antihistamínicos diarios"},
-    {"Fecha": "2024-01-15", "Edad": 27, "Síntomas": "Dolor lumbar", "Diagnóstico": "Lumbalgia", "Tratamiento": "Ibuprofeno, fisioterapia"},
-    {"Fecha": "2023-12-02", "Edad": 26, "Síntomas": "Mareos, debilidad", "Diagnóstico": "Hipotensión", "Tratamiento": "Aumento de líquidos y reposo"},
-    {"Fecha": "2023-08-20", "Edad": 25, "Síntomas": "Inflamación en rodilla", "Diagnóstico": "Bursitis", "Tratamiento": "Reposo, antiinflamatorios"},
-    {"Fecha": "2023-05-05", "Edad": 24, "Síntomas": "Dolor torácico leve", "Diagnóstico": "Costocondritis", "Tratamiento": "Analgésicos, descanso físico"},
-    {"Fecha": "2023-03-12", "Edad": 23, "Síntomas": "Cansancio excesivo", "Diagnóstico": "Anemia leve", "Tratamiento": "Suplementos de hierro"},
-    {"Fecha": "2023-01-25", "Edad": 23, "Síntomas": "Erupción cutánea", "Diagnóstico": "Dermatitis", "Tratamiento": "Crema tópica, evitar irritantes"},
-    {"Fecha": "2022-11-09", "Edad": 21, "Síntomas": "Tos persistente, fiebre", "Diagnóstico": "Bronquitis", "Tratamiento": "Amoxicilina 500mg cada 8h por 7 días"},
-    {"Fecha": "2022-02-05", "Edad": 20, "Síntomas": "Mareos frecuentes", "Diagnóstico": "Vértigo posicional benigno", "Tratamiento": "Ejercicios vestibulares, reposo"},
-    {"Fecha": "2021-11-10", "Edad": 20, "Síntomas": "Dolor en la garganta", "Diagnóstico": "Faringitis", "Tratamiento": "Ibuprofeno, gárgaras salinas"},
-    {"Fecha": "2021-08-15", "Edad": 18, "Síntomas": "Dolor muscular generalizado", "Diagnóstico": "Fibromialgia leve", "Tratamiento": "Fisioterapia, ejercicios moderados"},
-    {"Fecha": "2021-04-20", "Edad": 15, "Síntomas": "Acidez frecuente", "Diagnóstico": "Reflujo gastroesofágico", "Tratamiento": "Omeprazol, dieta especial"}
-]
+            {"Fecha": "2024-03-05", "Edad": 30, "Síntomas": "Dolor muscular", "Diagnóstico": "Contractura muscular",
+             "Tratamiento": "Relajante muscular, descanso"},
+            {"Fecha": "2024-01-17", "Edad": 30, "Síntomas": "Dolor de oído", "Diagnóstico": "Otitis",
+             "Tratamiento": "Gotas óticas antibióticas"},
+            {"Fecha": "2024-03-01", "Edad": 29, "Síntomas": "Dolor de cabeza frecuente", "Diagnóstico": "Migraña",
+             "Tratamiento": "Ibuprofeno, reducción del estrés"},
+            {"Fecha": "2024-02-05", "Edad": 29, "Síntomas": "Congestión nasal", "Diagnóstico": "Rinitis alérgica",
+             "Tratamiento": "Antihistamínicos diarios"},
+            {"Fecha": "2024-01-15", "Edad": 27, "Síntomas": "Dolor lumbar", "Diagnóstico": "Lumbalgia",
+             "Tratamiento": "Ibuprofeno, fisioterapia"},
+            {"Fecha": "2023-12-02", "Edad": 26, "Síntomas": "Mareos, debilidad", "Diagnóstico": "Hipotensión",
+             "Tratamiento": "Aumento de líquidos y reposo"},
+            {"Fecha": "2023-08-20", "Edad": 25, "Síntomas": "Inflamación en rodilla", "Diagnóstico": "Bursitis",
+             "Tratamiento": "Reposo, antiinflamatorios"},
+            {"Fecha": "2023-05-05", "Edad": 24, "Síntomas": "Dolor torácico leve", "Diagnóstico": "Costocondritis",
+             "Tratamiento": "Analgésicos, descanso físico"},
+            {"Fecha": "2023-03-12", "Edad": 23, "Síntomas": "Cansancio excesivo", "Diagnóstico": "Anemia leve",
+             "Tratamiento": "Suplementos de hierro"},
+            {"Fecha": "2023-01-25", "Edad": 23, "Síntomas": "Erupción cutánea", "Diagnóstico": "Dermatitis",
+             "Tratamiento": "Crema tópica, evitar irritantes"},
+            {"Fecha": "2022-11-09", "Edad": 21, "Síntomas": "Tos persistente, fiebre", "Diagnóstico": "Bronquitis",
+             "Tratamiento": "Amoxicilina 500mg cada 8h por 7 días"},
+            {"Fecha": "2022-02-05", "Edad": 20, "Síntomas": "Mareos frecuentes",
+             "Diagnóstico": "Vértigo posicional benigno", "Tratamiento": "Ejercicios vestibulares, reposo"},
+            {"Fecha": "2021-11-10", "Edad": 20, "Síntomas": "Dolor en la garganta", "Diagnóstico": "Faringitis",
+             "Tratamiento": "Ibuprofeno, gárgaras salinas"},
+            {"Fecha": "2021-08-15", "Edad": 18, "Síntomas": "Dolor muscular generalizado",
+             "Diagnóstico": "Fibromialgia leve", "Tratamiento": "Fisioterapia, ejercicios moderados"},
+            {"Fecha": "2021-04-20", "Edad": 15, "Síntomas": "Acidez frecuente",
+             "Diagnóstico": "Reflujo gastroesofágico", "Tratamiento": "Omeprazol, dieta especial"}
+        ]
 
         df_history = pd.DataFrame(historial_medico)
         st.dataframe(df_history, use_container_width=True)
@@ -90,7 +109,6 @@ with col1:
     with tabs[3]:
         st.subheader("Centro de Validación Médica")
         st.map(pd.DataFrame([patient_location]))
-
 
         if st.session_state.medical_history:
             latest_case = st.session_state.medical_history[-1]
@@ -195,28 +213,77 @@ with col1:
         st.markdown("---")
         st.subheader("Medicamentos disponibles")
 
-        medicamentos = [
-            {"nombre": "Paracetamol 500mg", "precio": "$50 MXN", "imagen": "https://via.placeholder.com/150"},
-            {"nombre": "Omeprazol 20mg", "precio": "$75 MXN", "imagen": "https://via.placeholder.com/150"},
-            {"nombre": "Ibuprofeno 400mg", "precio": "$65 MXN", "imagen": "https://via.placeholder.com/150"}
-        ]
+        print("MEDS:", st.session_state.medicamentos)
 
-        for med in medicamentos:
+        for med in st.session_state.medicamentos:
             st.image(med["imagen"], width=100)
             st.write(f"**{med['nombre']}** - {med['precio']}")
             if st.button(f"Pagar {med['nombre']}"):
                 st.success(f"Redirigiendo a Pay Retailers para realizar el pago de {med['nombre']}...")
 
 with col2:
+    class ChoiceResponse(BaseModel):
+        choice: str = Field(description="One of the following choices: general, medication")
+
+
+    class GeneralResponse(BaseModel):
+        content: str = Field(description="Content of the message")
+        tools_used: list[str]
+
+
+    class MedicationResponse(BaseModel):
+        content: str = Field(
+            description="The explanation of the medication, what they are used for and how to take them.")
+        medications: list[dict[str, str]] = Field(
+            description="Follow this structure, mandatory: List of dictionaries following the format: {'nombre': <nombre>, 'precio': <precio> (str not int), 'imagen': <imagen> (random images from https://picsum.photos/)}}")
+
+
+    generic_parser = PydanticOutputParser(pydantic_object=ChoiceResponse)
+    general_parser = PydanticOutputParser(pydantic_object=GeneralResponse)
+    medication_parser = PydanticOutputParser(pydantic_object=MedicationResponse)
+
     st.header("Asistente de Salud Rural")
     uploaded_image = st.file_uploader("Subir imagen médica", type=["jpg", "png"])
     for msg in st.session_state.messages:
         st.chat_message(msg["role"]).write(msg["content"])
     user_input = st.chat_input("Describe síntomas...")
+
     if user_input:
         st.session_state.messages.append({"role": "user", "content": user_input})
         st.chat_message("user").write(user_input)
-        raw = agent_executor.invoke({"query": user_input, "chat_history": st.session_state.messages})
-        response_content = raw.get("output", "No se pudo procesar la respuesta.")
+
+        raw = agent_executor.invoke({
+                                        "query": f"Choose what mode would fit best to answer for the following user input: <{user_input}>? It can be a <general> output (with response and used tools) or <medication> output with the response and list of medications (in the case of having to return medication ",
+                                        "chat_history": st.session_state.messages,
+                                        "format_instructions": generic_parser.get_format_instructions()})
+
+        print(raw)
+        print(f"Mode: {generic_parser.parse(raw.get("output")).choice}")
+
+        choice = generic_parser.parse(raw.get("output")).choice
+
+        match choice:
+            case "medication":
+                print("choosing medication parser")
+                parser = medication_parser
+            case ("general", _):
+                print("choosing general parser")
+                parser = general_parser
+            case _:
+                parser = general_parser
+                print("nothing")
+
+        raw = agent_executor.invoke({"query": user_input, "chat_history": st.session_state.messages,
+                                     "format_instructions": parser.get_format_instructions()})
+
+        print("raw:", raw)
+
+        if choice == "medication":
+            st.session_state.medicamentos = parser.parse(raw.get("output")).medications
+
+        response_content = parser.parse(raw.get("output", "No se pudo procesar la respuesta.")).content
         st.session_state.messages.append({"role": "assistant", "content": response_content})
         st.chat_message("assistant").write(response_content)
+
+        if choice == "medication":
+            st.rerun()

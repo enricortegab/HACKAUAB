@@ -131,6 +131,3 @@ Aumento de Clientes: Captación de nuevos usuarios mediante soluciones de salud.
 
 Innovación en Financiación Médica: Adaptación de métodos de pago a las necesidades regionales.
 
----
-Este plan proporciona una guía clara para el desarrollo, integración y futuras ampliaciones del proyecto de telemedicina preventiva.
-
